@@ -57,7 +57,7 @@ function matchMedia(matches) {
 
 beforeEach(() => {
   matchMedia(false)
-  window.location.hash = `#/${home}/`
+  window.history.replaceState(null, '', `/${home}/`)
   globalThis.fetch = async (url) => {
     const pathname = String(url).replace(/^https?:\/\/[^/]+/, '').replace(/^\//, '')
     const body = files[pathname]
@@ -68,22 +68,22 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  window.location.hash = ''
+  window.history.replaceState(null, '', '/')
 })
 
 describe('App', () => {
   it('renders a published article from directory, article, front matter, and backlinks', async () => {
     render(<App />)
     expect(await screen.findByRole('link', { name: 'other-note' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'other-note' }).getAttribute('href')).toBe(`#/${other}/`)
+    expect(screen.getByRole('link', { name: 'other-note' }).getAttribute('href')).toBe(`/${other}/`)
     expect(await screen.findByText(/Run the installer/)).toBeTruthy()
     expect(screen.queryByText(/Later/)).toBeNull()
-    expect(document.querySelector('img')?.getAttribute('src')).toBe(`assets/${png}`)
+    expect(document.querySelector('img')?.getAttribute('src')).toBe(`/assets/${png}`)
     expect(screen.getByText('missing')).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'missing' })).toBeNull()
     expect(screen.getByText('go')).toBeTruthy()
     const backlink = [...document.querySelectorAll('.backlinks a')].find((a) => a.textContent === 'Other')
-    expect(backlink?.getAttribute('href')).toBe(`#/${other}/`)
+    expect(backlink?.getAttribute('href')).toBe(`/${other}/`)
     expect(screen.getByText('the home')).toBeTruthy()
     expect(screen.getByText('notes/')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Open navigation' })).toBeNull()
@@ -107,8 +107,8 @@ describe('App', () => {
     expect(document.documentElement.classList.contains('nav-collapsed')).toBe(false)
   })
 
-  it('renders directory.json as the sidebar tree, with its own search, at #/directory', async () => {
-    window.location.hash = '#/directory/'
+  it('renders directory.json as the sidebar tree, with its own search, at /directory/', async () => {
+    window.history.replaceState(null, '', '/directory/')
     render(<App />)
     const main = () => within(document.querySelector('main'))
     const sidebar = () => within(document.querySelector('.sidebar'))
@@ -117,13 +117,13 @@ describe('App', () => {
     expect(main().queryByRole('heading', { name: 'Not found' })).toBeNull()
     expect(main().queryByText(/Start with/)).toBeNull()
     expect(main().getByText('notes/')).toBeTruthy()
-    expect(main().getByRole('link', { name: 'Home' }).getAttribute('href')).toBe(`#/${home}/`)
+    expect(main().getByRole('link', { name: 'Home' }).getAttribute('href')).toBe(`/${home}/`)
     const sideLink = sidebar().getByRole('link', { name: 'Directory' })
-    expect(sideLink.getAttribute('href')).toBe('#/directory')
+    expect(sideLink.getAttribute('href')).toBe('/directory/')
     expect(sideLink.classList.contains('active')).toBe(true)
 
     fireEvent.change(main().getByRole('searchbox', { name: 'Filter documents' }), { target: { value: 'other-note' } })
-    expect(main().getByRole('link', { name: 'Other' }).getAttribute('href')).toBe(`#/${other}/`)
+    expect(main().getByRole('link', { name: 'Other' }).getAttribute('href')).toBe(`/${other}/`)
     expect(main().getByRole('link', { name: 'Other' }).getAttribute('title')).toBe('notes/other-note.md')
     expect(main().queryByRole('link', { name: 'Home' })).toBeNull()
     expect(main().queryByText('notes/')).toBeNull()

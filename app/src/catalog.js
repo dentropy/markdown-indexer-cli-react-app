@@ -30,16 +30,48 @@ export function rootDocumentID(catalog) {
   return catalog.byPath.get('index.md') || (catalog.documents[0] && catalog.documents[0].uuid) || null
 }
 
-export function parseHash(hash) {
-  const h = String(hash || '').replace(/^#\/?/, '')
-  if (!h) return { id: null, section: '' }
-  const parts = h.split('#')
-  const id = decodeURIComponent(parts[0].replace(/\/$/, ''))
-  const section = parts[1] ? decodeURIComponent(parts[1]) : ''
-  return { id: id || null, section }
+// /<uuid>/ is an article. /directory/ is the catalog. A heading is /<uuid>/#slug.
+export function articlePath(id, section) {
+  if (!id) return '/'
+  const path = `/${encodeURIComponent(id)}/`
+  return section ? `${path}#${section}` : path
 }
 
-// #/directory is the catalog page. Document ids are UUIDs, so this name is free.
+function decodePart(value) {
+  try { return decodeURIComponent(value) } catch { return value }
+}
+
+export function parsePath(pathname, hash) {
+  const path = decodePart(String(pathname || '/')).replace(/\/+$/, '')
+  const section = decodePart(String(hash || '').replace(/^#/, ''))
+  if (!path) return { id: null, section }
+  const id = path.slice(1)
+  if (!id || id.includes('/')) return { id: null, section: '' }
+  return { id, section }
+}
+
+// Old links were #/<uuid>/ and #/<uuid>/#<heading>. The pathname in that
+// case is /, and the whole route sits in the fragment.
+export function legacyHashPath(hash) {
+  const raw = String(hash || '')
+  if (!raw.startsWith('#/')) return ''
+  const body = raw.slice(2)
+  const cut = body.indexOf('#')
+  const idPart = (cut === -1 ? body : body.slice(0, cut)).replace(/\/+$/, '')
+  const section = cut === -1 ? '' : decodePart(body.slice(cut + 1))
+  if (!idPart) return '/'
+  return articlePath(decodePart(idPart), section)
+}
+
+export function isAppRoute(pathname) {
+  const path = String(pathname || '/').replace(/\/+$/, '') || '/'
+  if (path === '/') return true
+  if (path.startsWith('/articles') || path.startsWith('/frontmatter') || path.startsWith('/backlinks') || path.startsWith('/assets')) return false
+  if (path === '/directory.json' || path.includes('.')) return false
+  return !path.slice(1).includes('/')
+}
+
+// /directory is the catalog page. Document ids are UUIDs, so this name is free.
 export function isDirectoryRoute(route) {
   return !!route && route.id === 'directory'
 }

@@ -10,4 +10,4 @@ Published markdown, open in the browser.
 
 ## A heading
 
-The hash `#/<uuid>/#a-heading` scrolls to this heading.
+The URL `/<uuid>/#a-heading` scrolls to this heading.

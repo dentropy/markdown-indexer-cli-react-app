@@ -5,7 +5,7 @@ const base = () => String(import.meta.env.VITE_DATA_BASE || '').replace(/\/$/, '
 export function dataURL(path) {
   const p = String(path).replace(/^\//, '')
   const b = base()
-  return b ? `${b}/${p}` : p
+  return b ? `${b}/${p}` : `/${p}`
 }
 
 export function loadJSON(path, cache) {

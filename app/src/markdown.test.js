@@ -34,7 +34,7 @@ describe('embeds and wikilinks', () => {
       catalog,
     )
     const link = nodes.find((n) => n.type === 'link' && n.children[0].value === 'the setup')
-    expect(link.url).toBe('#/other-id/#setup')
+    expect(link.url).toBe('/other-id/#setup')
     expect(nodes.some((n) => n.type === 'text' && n.value === 'other-note.md')).toBe(true)
     expect(nodes.some((n) => n.type === 'text' && n.value === 'missing')).toBe(true)
     const external = nodes.find((n) => n.type === 'link' && n.url === 'https://example.com/x')

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildTree, indexDocuments, isDirectoryRoute, nameFromPath, parseHash, rootDocumentID } from './catalog.js'
+import { articlePath, buildTree, indexDocuments, isDirectoryRoute, legacyHashPath, nameFromPath, parsePath, rootDocumentID } from './catalog.js'
 
 describe('catalog', () => {
   it('derives names from the final extension only', () => {
@@ -24,16 +24,25 @@ describe('catalog', () => {
     expect(catalog.documents).toHaveLength(3)
   })
 
-  it('parses #/$UUID/#section', () => {
-    expect(parseHash('')).toEqual({ id: null, section: '' })
-    expect(parseHash('#/abc/#Setup')).toEqual({ id: 'abc', section: 'Setup' })
+  it('parses /uuid/ and a heading fragment', () => {
+    expect(parsePath('/', '')).toEqual({ id: null, section: '' })
+    expect(parsePath('/abc/', '#Setup')).toEqual({ id: 'abc', section: 'Setup' })
+    expect(parsePath('/abc', '')).toEqual({ id: 'abc', section: '' })
+    expect(articlePath('abc', 'Setup')).toBe('/abc/#Setup')
   })
 
-  it('treats #/directory as the catalog page', () => {
-    expect(isDirectoryRoute(parseHash('#/directory'))).toBe(true)
-    expect(isDirectoryRoute(parseHash('#/directory/'))).toBe(true)
-    expect(isDirectoryRoute(parseHash('#/abc/'))).toBe(false)
-    expect(isDirectoryRoute(parseHash(''))).toBe(false)
+  it('treats /directory/ as the catalog page', () => {
+    expect(isDirectoryRoute(parsePath('/directory', ''))).toBe(true)
+    expect(isDirectoryRoute(parsePath('/directory/', ''))).toBe(true)
+    expect(isDirectoryRoute(parsePath('/abc/', ''))).toBe(false)
+    expect(isDirectoryRoute(parsePath('/', ''))).toBe(false)
+  })
+
+  it('rewrites a legacy hash route onto a path', () => {
+    expect(legacyHashPath('#/abc/')).toBe('/abc/')
+    expect(legacyHashPath('#/abc/#Setup')).toBe('/abc/#Setup')
+    expect(legacyHashPath('#/directory/')).toBe('/directory/')
+    expect(legacyHashPath('#setup')).toBe('')
   })
 
   it('groups documents into folders without dropping root files', () => {

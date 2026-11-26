@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { createStore, dataURL, loadJSON } from './api.js'
-import { buildTree, indexDocuments, isDirectoryRoute, parseHash, rootDocumentID } from './catalog.js'
+import { articlePath, buildTree, indexDocuments, isAppRoute, isDirectoryRoute, legacyHashPath, parsePath, rootDocumentID } from './catalog.js'
 import { extractSection, remarkVault, slugify } from './markdown.js'
 
 const MAX_EMBED_DEPTH = 8
@@ -65,14 +65,42 @@ function useAsync(fn, deps) {
   return state
 }
 
-function useHash() {
-  const [hash, setHash] = useState(() => window.location.hash)
+function locationKey() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`
+}
+
+function usePath() {
+  const [key, setKey] = useState(locationKey)
   useEffect(() => {
-    const onChange = () => setHash(window.location.hash)
-    window.addEventListener('hashchange', onChange)
-    return () => window.removeEventListener('hashchange', onChange)
+    const next = legacyHashPath(window.location.hash)
+    if (next) {
+      window.history.replaceState(null, '', next)
+      setKey(locationKey())
+    }
+    const onChange = () => setKey(locationKey())
+    window.addEventListener('popstate', onChange)
+    return () => window.removeEventListener('popstate', onChange)
   }, [])
-  return hash
+  return key
+}
+
+function followInApp(anchor, event) {
+  if (event.defaultPrevented || event.button !== 0) return false
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false
+  if (anchor.target && anchor.target !== '_self') return false
+  if (anchor.hasAttribute('download')) return false
+  const href = anchor.getAttribute('href')
+  if (!href) return false
+  let url
+  try { url = new URL(href, window.location.href) } catch { return false }
+  if (url.origin !== window.location.origin || !isAppRoute(url.pathname)) return false
+  event.preventDefault()
+  const next = `${url.pathname}${url.search}${url.hash}`
+  if (next !== locationKey()) {
+    window.history.pushState(null, '', next)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
+  return true
 }
 
 const NARROW_QUERY = '(max-width: 700px)'
@@ -122,7 +150,7 @@ function WikiEmbed({ uuid, section, alias, target }) {
   return (
     <div className="embed">
       <div className="embed-head">
-        <a href={`#/${encodeURIComponent(uuid)}/`}>embedded from {title}</a>
+        <a href={articlePath(uuid)}>embedded from {title}</a>
       </div>
       <VaultContext.Provider value={nested}>
         <Markdown text={body} />
@@ -148,7 +176,7 @@ function Backlinks({ id, store }) {
       <ul>
         {items.map((bl) => (
           <li key={`${bl.from_document_id}:${bl.title}`}>
-            <a href={`#/${encodeURIComponent(bl.from_document_id)}/`}>{bl.from_name}</a>
+            <a href={articlePath(bl.from_document_id)}>{bl.from_name}</a>
             {bl.title && bl.title !== bl.from_name
               ? <span className="backlink-title"> {bl.title}</span>
               : null}
@@ -225,7 +253,7 @@ function Tree({ node, active, openPaths }) {
         <a
           key={`${doc.path}:${doc.uuid}`}
           className={doc.uuid === active ? 'nav-doc active' : 'nav-doc'}
-          href={`#/${encodeURIComponent(doc.uuid)}/`}
+          href={articlePath(doc.uuid)}
           title={doc.path}
         >
           {doc.title || doc.uuid}
@@ -293,7 +321,7 @@ function CatalogList({ documents, tree, active, openPaths, onNavigate }) {
           <a
             key={`${doc.path}:${doc.uuid}`}
             className={doc.uuid === active ? 'nav-doc active' : 'nav-doc'}
-            href={`#/${encodeURIComponent(doc.uuid)}/`}
+            href={articlePath(doc.uuid)}
             title={doc.path}
           >
             {doc.title || doc.uuid}
@@ -319,7 +347,7 @@ function DirectoryPage({ documents, tree }) {
 
 export default function App() {
   const store = useMemo(() => createStore(), [])
-  const hash = useHash()
+  const path = usePath()
   const narrow = useNarrow()
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('nav-collapsed') === '1' } catch { return false }
@@ -336,7 +364,7 @@ export default function App() {
 
   useEffect(() => {
     if (narrow) setDrawerOpen(false)
-  }, [hash, narrow])
+  }, [path, narrow])
 
   useEffect(() => {
     if (!narrow || !drawerOpen) return
@@ -365,7 +393,7 @@ export default function App() {
     () => (catalog ? buildTree(catalog.documents) : null),
     [catalog],
   )
-  const route = parseHash(hash)
+  const route = parsePath(window.location.pathname, window.location.hash)
   const directoryPage = isDirectoryRoute(route)
   const id = directoryPage ? null : (route.id || (catalog ? rootDocumentID(catalog) : null))
   const active = catalog && id ? catalog.byUUID.get(id) : null
@@ -374,11 +402,13 @@ export default function App() {
   const barTitle = directoryPage ? 'Directory' : ((active && active.title) || 'Vault')
 
   function onNavClick(event) {
-    if (narrow && event.target.closest('a')) setDrawerOpen(false)
+    const anchor = event.target.closest && event.target.closest('a')
+    if (anchor) followInApp(anchor, event)
+    if (narrow && anchor) setDrawerOpen(false)
   }
 
   return (
-    <div className="layout">
+    <div className="layout" onClick={onNavClick}>
       {narrow ? (
         <div className="topbar">
           <button
@@ -398,7 +428,7 @@ export default function App() {
       ) : null}
       <aside className="sidebar" inert={narrow && !drawerOpen ? true : undefined}>
         <div className="sidebar-head">
-          <a className="brand" href="#/">Vault</a>
+          <a className="brand" href="/">Vault</a>
           <button
             className="nav-toggle"
             type="button"
@@ -411,7 +441,7 @@ export default function App() {
         {catalog ? (
           <a
             className={directoryPage ? 'nav-doc active directory-link' : 'nav-doc directory-link'}
-            href="#/directory"
+            href={articlePath('directory')}
             onClick={onNavClick}
           >
             Directory
@@ -436,7 +466,7 @@ export default function App() {
           <>
             <h1>Failed to load data</h1>
             <pre className="error">{String(boot.error.message || boot.error)}</pre>
-            <p>The app fetches <code>directory.json</code> from this server. Publish with <code>markdown-tools-cli -site-dir</code>, link <code>manifest.json</code> to <code>directory.json</code>, and start <code>DATA_DIR=... ./dev.sh</code>.</p>
+            <p>The app fetches <code>directory.json</code> from this server. Publish <code>examples/vault</code> with <code>markdown-indexer-cli -site-dir</code>, then start <code>APP_PORT=8080 DATA_DIR=... ./dev.sh</code>.</p>
           </>
         ) : null}
         {!boot.loading && !boot.error && catalog && !directoryPage && !id ? <h1>Empty vault</h1> : null}

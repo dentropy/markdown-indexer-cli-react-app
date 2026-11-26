@@ -6,13 +6,19 @@ here=$(cd "$(dirname "$0")" && pwd)
 default_dir="$here/../../../markdown-indexer/libs/markdown-tools-cli/mememaps.net"
 data_dir="${DATA_DIR:-$default_dir}"
 data_port="${DATA_PORT:-8000}"
-app_port="${APP_PORT:-5173}"
+app_port="${APP_PORT:-8080}"
 
 if [[ ! -f "$data_dir/directory.json" ]]; then
   echo "no directory.json in $data_dir" >&2
-  echo "publish with: markdown-tools-cli -dir <vault> -site-dir <site>" >&2
-  echo "the CLI writes manifest.json; this app fetches directory.json:" >&2
-  echo "  ln -sfn manifest.json \"$data_dir/directory.json\"" >&2
+  echo "from this repository:" >&2
+  echo "  markdown-indexer-cli -dir examples/vault -site-dir /tmp/vault-site" >&2
+  echo "  APP_PORT=8080 DATA_DIR=/tmp/vault-site $0" >&2
+  exit 1
+fi
+
+if python3 -c 'import socket,sys; s=socket.socket(); rc=s.connect_ex(("127.0.0.1", int(sys.argv[1]))); s.close(); sys.exit(0 if rc==0 else 1)' "$data_port"; then
+  echo "port ${data_port} is already in use" >&2
+  echo "stop the other ./dev.sh (Ctrl-C), or set DATA_PORT to a free port" >&2
   exit 1
 fi
 
@@ -21,17 +27,25 @@ if [[ ! -d "$here/app/node_modules" ]]; then
 fi
 
 echo "JSON at http://127.0.0.1:${data_port}/  ($data_dir)"
-python3 -m http.server "$data_port" --directory "$data_dir" >/tmp/025-data-server.log 2>&1 &
+python3 -m http.server "$data_port" --bind 127.0.0.1 --directory "$data_dir" >/tmp/025-data-server.log 2>&1 &
 data_pid=$!
 cleanup() { kill "$data_pid" 2>/dev/null || true; }
 trap cleanup EXIT
 
+ready=0
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   if curl -fsS "http://127.0.0.1:${data_port}/directory.json" >/dev/null; then
+    ready=1
     break
   fi
   sleep 0.2
 done
+if [[ "$ready" -ne 1 ]]; then
+  echo "directory.json is not being served on port ${data_port}" >&2
+  echo "data server log:" >&2
+  cat /tmp/025-data-server.log >&2 || true
+  exit 1
+fi
 
 echo "app at http://127.0.0.1:${app_port}/"
 cd "$here/app"

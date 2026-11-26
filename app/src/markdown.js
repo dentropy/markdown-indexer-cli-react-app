@@ -1,3 +1,5 @@
+import { articlePath } from './catalog.js'
+
 const FENCE = /^\s*(```|~~~)/
 const TOKEN = /!\[\[([^\]|#]+)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]|\[\[([^\]|#]+)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]/g
 
@@ -93,9 +95,7 @@ function wikilinkNode(target, section, alias, catalog) {
   if (hasScheme(target)) return linkNode(target, label)
   const uuid = catalog.byName.get(target)
   if (!uuid) return textNode(label)
-  const href = section
-    ? `#/${encodeURIComponent(uuid)}/#${slugify(section)}`
-    : `#/${encodeURIComponent(uuid)}/`
+  const href = articlePath(uuid, section ? slugify(section) : '')
   return linkNode(href, label)
 }
 
@@ -149,7 +149,7 @@ export function remarkVault(catalog) {
         node.children = next.map((child) => {
           if (child.type !== 'wikiEmbed') return child
           const props = child.data.hProperties
-          return linkNode(`#/${encodeURIComponent(props.uuid)}/`, props.alias || props.target)
+          return linkNode(articlePath(props.uuid), props.alias || props.target)
         })
         return
       }
