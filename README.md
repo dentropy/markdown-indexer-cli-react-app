@@ -60,34 +60,18 @@ unless you pass `-force` (or `-F`).
 `-initfrontmatter` and `-setshare` rewrite the vault in place. Run them on a
 copy, or from a checkout you can revert.
 
-### A two-note vault you can publish immediately
+### The sample vault in this repo
+
+[examples/vault](./examples/vault) is two notes you can publish as they are:
+
+- [index.md](./examples/vault/index.md) — landing note, links to `[[second-note]]`
+- [second-note.md](./examples/vault/second-note.md) — a second page with a heading
+
+From this repository:
 
 ```sh
-mkdir -p /tmp/vault-demo
-cat > /tmp/vault-demo/index.md << 'EOF'
----
-uuid: 123e4567-e89b-12d3-a456-426614174000
-title: Hello
-share: true
----
-
-# Hello
-
-This note links to [[second-note]].
-EOF
-cat > /tmp/vault-demo/second-note.md << 'EOF'
----
-uuid: 223e4567-e89b-12d3-a456-426614174000
-title: Second note
-share: true
----
-
-# Second note
-
-Published markdown, open in the browser.
-EOF
 mkdir -p /tmp/vault-site
-markdown-tools-cli -dir /tmp/vault-demo -site-dir /tmp/vault-site
+markdown-tools-cli -dir examples/vault -site-dir /tmp/vault-site
 ```
 
 `/tmp/vault-site` then contains `manifest.json`, `articles/<uuid>.json`,
