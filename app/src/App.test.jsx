@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App.jsx'
+import { HOME_DOCUMENT_ID } from './catalog.js'
 
 const home = '11111111-1111-4111-8111-111111111111'
 const other = '22222222-2222-4222-8222-222222222222'
@@ -105,6 +106,19 @@ describe('App', () => {
     expect(document.documentElement.classList.contains('drawer-open')).toBe(false)
     expect(sidebar().hasAttribute('inert')).toBe(true)
     expect(document.documentElement.classList.contains('nav-collapsed')).toBe(false)
+  })
+
+  it('forwards / to the hardcoded note', async () => {
+    window.history.replaceState(null, '', '/')
+    render(<App />)
+    expect(window.location.pathname).toBe(`/${HOME_DOCUMENT_ID}/`)
+    expect(await screen.findByRole('heading', { name: 'Not found' })).toBeTruthy()
+
+    window.history.replaceState(null, '', `/${home}/`)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    expect(await screen.findByText(/Start with/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('link', { name: 'Vault' }))
+    expect(window.location.pathname).toBe(`/${HOME_DOCUMENT_ID}/`)
   })
 
   it('renders directory.json as the sidebar tree, with its own search, at /directory/', async () => {

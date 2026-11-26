@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { pageviewProperties, track } from './analytics.js'
 import { createStore, dataURL, loadJSON } from './api.js'
-import { articlePath, buildTree, indexDocuments, isAppRoute, isDirectoryRoute, legacyHashPath, parsePath, rootDocumentID } from './catalog.js'
+import { articlePath, buildTree, indexDocuments, isAppRoute, isDirectoryRoute, parsePath, rootDocumentID, rootForwardPath } from './catalog.js'
 import { extractSection, remarkVault, slugify } from './markdown.js'
 
 const MAX_EMBED_DEPTH = 8
@@ -70,15 +70,23 @@ function locationKey() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`
 }
 
+function rewriteLocation() {
+  const next = rootForwardPath(window.location.pathname, window.location.hash)
+  if (!next || next === locationKey()) return false
+  window.history.replaceState(null, '', next)
+  return true
+}
+
 function usePath() {
-  const [key, setKey] = useState(locationKey)
+  const [key, setKey] = useState(() => {
+    rewriteLocation()
+    return locationKey()
+  })
   useEffect(() => {
-    const next = legacyHashPath(window.location.hash)
-    if (next) {
-      window.history.replaceState(null, '', next)
+    const onChange = () => {
+      rewriteLocation()
       setKey(locationKey())
     }
-    const onChange = () => setKey(locationKey())
     window.addEventListener('popstate', onChange)
     return () => window.removeEventListener('popstate', onChange)
   }, [])

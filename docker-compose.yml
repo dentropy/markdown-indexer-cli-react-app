@@ -1,5 +1,9 @@
 # Serve a markdown-indexer-cli -site-dir directory. The directory is mounted
 # read-only at /data. Publish it first; this file does not run the CLI.
+#
+# Set these in the shell or in a .env file next to this file. The server
+# injects them into the page. A blank PostHog token leaves analytics off.
+# HOME_DOCUMENT_ID is the note / forwards to. The default is examples/vault/index.md.
 services:
   reader:
     build:
@@ -11,6 +15,9 @@ services:
     environment:
       DATA_ROOT: /data
       PORT: "8081"
+      POSTHOG_PROJECT_TOKEN: ${POSTHOG_PROJECT_TOKEN:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+      HOME_DOCUMENT_ID: ${HOME_DOCUMENT_ID:-}
     volumes:
       # - /path/to/markdown-json:/data:ro
       - ${SITE_DIR:-/tmp/vault-site}:/data:ro

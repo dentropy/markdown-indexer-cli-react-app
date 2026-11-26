@@ -18,6 +18,7 @@ async function loadAnalytics() {
 
 afterEach(() => {
   vi.unstubAllEnvs()
+  delete window.__VAULT__
   init.mockClear()
   capture.mockClear()
 })
@@ -62,6 +63,17 @@ describe('initAnalytics', () => {
       document_id: 'abc',
       has_section: false,
     })
+  })
+
+  it('prefers the token and host injected by the server', async () => {
+    window.__VAULT__ = { posthogToken: 'phc_runtime', posthogHost: 'https://example.test' }
+    vi.stubEnv('VITE_POSTHOG_PROJECT_TOKEN', 'phc_build')
+    vi.stubEnv('VITE_POSTHOG_HOST', 'https://eu.i.posthog.com')
+    const { initAnalytics } = await loadAnalytics()
+    initAnalytics()
+    expect(init).toHaveBeenCalledWith('phc_runtime', expect.objectContaining({
+      api_host: 'https://example.test',
+    }))
   })
 
   it('uses the US ingestion host when VITE_POSTHOG_HOST is blank', async () => {

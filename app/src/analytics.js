@@ -1,5 +1,6 @@
 import posthog from 'posthog-js'
 import { isDirectoryRoute, parsePath, rootDocumentID } from './catalog.js'
+import { posthogHost, posthogToken } from './config.js'
 
 // Titles, paths, search text, and URL overrides never leave the browser.
 const ALLOWED = new Set([
@@ -14,9 +15,9 @@ const ALLOWED = new Set([
 let enabled = false
 
 export function initAnalytics() {
-  const token = String(import.meta.env.VITE_POSTHOG_PROJECT_TOKEN || '').trim()
+  const token = posthogToken()
   if (!token) return null
-  const host = String(import.meta.env.VITE_POSTHOG_HOST || '').trim() || 'https://us.i.posthog.com'
+  const host = posthogHost()
   // followInApp pushes history and then dispatches popstate. PostHog's
   // history_change pageviews would record both, so usePath captures one.
   posthog.init(token, {

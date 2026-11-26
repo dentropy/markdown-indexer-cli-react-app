@@ -1,3 +1,7 @@
+import { HOME_DOCUMENT_ID, homeDocumentID } from './config.js'
+
+export { HOME_DOCUMENT_ID, homeDocumentID }
+
 // directory.json is { documents: [{ title, uuid, path }] }, sorted by path.
 // The name index overwrites, so the greatest path wins. That is the article
 // the publisher wrote for a duplicated name or UUID.
@@ -35,6 +39,16 @@ export function articlePath(id, section) {
   if (!id) return '/'
   const path = `/${encodeURIComponent(id)}/`
   return section ? `${path}#${section}` : path
+}
+
+// Bare / becomes /<home id>/. A legacy #/<id>/ fragment still wins.
+// The id is HOME_DOCUMENT_ID unless the server or Vite env sets another.
+export function rootForwardPath(pathname, hash) {
+  const legacy = legacyHashPath(hash)
+  if (legacy) return legacy
+  const path = String(pathname || '/').replace(/\/+$/, '') || '/'
+  if (path !== '/') return ''
+  return articlePath(homeDocumentID(), parsePath(pathname, hash).section)
 }
 
 function decodePart(value) {

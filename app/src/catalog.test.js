@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { articlePath, buildTree, indexDocuments, isDirectoryRoute, legacyHashPath, nameFromPath, parsePath, rootDocumentID } from './catalog.js'
+import { articlePath, buildTree, HOME_DOCUMENT_ID, indexDocuments, isDirectoryRoute, legacyHashPath, nameFromPath, parsePath, rootDocumentID, rootForwardPath } from './catalog.js'
 
 describe('catalog', () => {
   it('derives names from the final extension only', () => {
@@ -43,6 +43,23 @@ describe('catalog', () => {
     expect(legacyHashPath('#/abc/#Setup')).toBe('/abc/#Setup')
     expect(legacyHashPath('#/directory/')).toBe('/directory/')
     expect(legacyHashPath('#setup')).toBe('')
+  })
+
+  it('forwards / to the hardcoded note and leaves other routes alone', () => {
+    expect(rootForwardPath('/', '')).toBe(`/${HOME_DOCUMENT_ID}/`)
+    expect(rootForwardPath('/', '#Setup')).toBe(`/${HOME_DOCUMENT_ID}/#Setup`)
+    expect(rootForwardPath('/', '#/abc/')).toBe('/abc/')
+    expect(rootForwardPath('/directory/', '')).toBe('')
+    expect(rootForwardPath(`/${HOME_DOCUMENT_ID}/`, '')).toBe('')
+  })
+
+  it('forwards / to the note injected by the server', () => {
+    const id = '99999999-9999-4999-8999-999999999999'
+    window.__VAULT__ = { homeDocumentId: id }
+    expect(rootForwardPath('/', '')).toBe(`/${id}/`)
+    window.__VAULT__ = { homeDocumentId: '   ' }
+    expect(rootForwardPath('/', '')).toBe(`/${HOME_DOCUMENT_ID}/`)
+    delete window.__VAULT__
   })
 
   it('groups documents into folders without dropping root files', () => {

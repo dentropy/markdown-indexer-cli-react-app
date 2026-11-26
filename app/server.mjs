@@ -11,9 +11,29 @@ const port = Number(process.env.PORT || 4173)
 // 127.0.0.1 keeps `npm run serve` on the machine. The image sets HOST=0.0.0.0.
 const host = process.env.HOST || '127.0.0.1'
 
-if (!dataRoot) {
-  console.error('DATA_ROOT is required (the publisher output directory)')
-  process.exit(1)
+function envPick(env, keys) {
+  for (const key of keys) {
+    const value = String(env[key] ?? '').trim()
+    if (value) return value
+  }
+  return ''
+}
+
+// Docker Compose sets the unprefixed names. VITE_* matches app/.env.local.
+export function vaultConfigFromEnv(env = process.env) {
+  return {
+    posthogToken: envPick(env, ['POSTHOG_PROJECT_TOKEN', 'VITE_POSTHOG_PROJECT_TOKEN']),
+    posthogHost: envPick(env, ['POSTHOG_HOST', 'VITE_POSTHOG_HOST']),
+    homeDocumentId: envPick(env, ['HOME_DOCUMENT_ID', 'VITE_HOME_DOCUMENT_ID']),
+  }
+}
+
+export function injectVaultConfig(html, env = process.env) {
+  const json = JSON.stringify(vaultConfigFromEnv(env)).replace(/</g, '\\u003c')
+  const tag = `<script>window.__VAULT__=${json}</script>`
+  if (html.includes('window.__VAULT__')) return html
+  if (html.includes('</head>')) return html.replace('</head>', `${tag}</head>`)
+  return tag + html
 }
 
 const types = {
@@ -65,18 +85,30 @@ const server = http.createServer((req, res) => {
     if (missing && !isData(urlPath)) {
       fs.readFile(path.join(appRoot, 'index.html'), (err, buf) => {
         if (err) return send(res, 404, 'not found')
-        send(res, 200, buf, types['.html'])
+        send(res, 200, injectVaultConfig(buf.toString('utf8')), types['.html'])
       })
       return
     }
     if (missing) return send(res, 404, 'not found')
     fs.readFile(file, (err, buf) => {
       if (err) return send(res, 404, 'not found')
-      send(res, 200, buf, types[path.extname(file)] || 'application/octet-stream')
+      const ext = path.extname(file)
+      const body = !isData(urlPath) && ext === '.html'
+        ? injectVaultConfig(buf.toString('utf8'))
+        : buf
+      send(res, 200, body, types[ext] || 'application/octet-stream')
     })
   })
 })
 
-server.listen(port, host, () => {
-  console.log(`http://${host}:${port}/`)
-})
+const entry = process.argv[1]
+const direct = !!entry && path.resolve(entry) === fileURLToPath(import.meta.url)
+if (direct) {
+  if (!dataRoot) {
+    console.error('DATA_ROOT is required (the publisher output directory)')
+    process.exit(1)
+  }
+  server.listen(port, host, () => {
+    console.log(`http://${host}:${port}/`)
+  })
+}
