@@ -26,3 +26,17 @@ APP_PORT=8080 DATA_DIR=/tmp/vault-site ./dev.sh
 ```
 
 The publisher writes `/tmp/vault-site/directory.json`. Open http://127.0.0.1:8080/. The sidebar lists Hello and Second note.
+
+# docker
+
+Turn a raw markdown folder into the JSON site. The first mount is the markdown. The second mount is the output.
+
+```sh
+docker run --rm -v "$PWD/examples/vault:/vault:ro" -v /tmp/vault-site:/site $(docker build -q --target cli .) -dir /vault -site-dir /site
+```
+
+```sh
+docker compose up --build
+```
+
+Open http://127.0.0.1:8081/.

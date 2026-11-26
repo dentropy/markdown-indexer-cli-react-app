@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url'
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'dist')
 const dataRoot = process.env.DATA_ROOT
 const port = Number(process.env.PORT || 4173)
+// 127.0.0.1 keeps `npm run serve` on the machine. The image sets HOST=0.0.0.0.
+const host = process.env.HOST || '127.0.0.1'
 
 if (!dataRoot) {
   console.error('DATA_ROOT is required (the publisher output directory)')
@@ -75,6 +77,6 @@ const server = http.createServer((req, res) => {
   })
 })
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`http://127.0.0.1:${port}/`)
+server.listen(port, host, () => {
+  console.log(`http://${host}:${port}/`)
 })

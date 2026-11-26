@@ -7,6 +7,11 @@ const dataOrigin = process.env.DATA_ORIGIN || 'http://127.0.0.1:8000'
 
 export default defineConfig({
   plugins: [react()],
+  // Published sites own /assets. server.mjs sends that prefix to DATA_ROOT,
+  // so the production bundle has to live somewhere else.
+  build: {
+    assetsDir: 'static',
+  },
   server: {
     host: '127.0.0.1',
     port: 5173,
