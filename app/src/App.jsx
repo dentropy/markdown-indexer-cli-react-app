@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { pageviewProperties, track } from './analytics.js'
 import { createStore, dataURL, loadJSON } from './api.js'
 import { articlePath, buildTree, indexDocuments, isAppRoute, isDirectoryRoute, legacyHashPath, parsePath, rootDocumentID } from './catalog.js'
 import { extractSection, remarkVault, slugify } from './markdown.js'
@@ -289,9 +290,18 @@ function ancestorPaths(path) {
 
 const EMPTY_PATHS = new Set()
 
-function CatalogList({ documents, tree, active, openPaths, onNavigate }) {
+function CatalogList({ documents, tree, active, openPaths, onNavigate, surface }) {
   const [query, setQuery] = useState('')
+  const wasEmpty = useRef(true)
   const q = query.trim().toLowerCase()
+  useEffect(() => {
+    const trimmed = query.trim()
+    const empty = trimmed === ''
+    if (wasEmpty.current && !empty) {
+      track('filter_used', { query_length: trimmed.length, surface })
+    }
+    wasEmpty.current = empty
+  }, [query, surface])
   const matches = useMemo(() => {
     if (!q) return null
     const out = []
@@ -340,7 +350,7 @@ function DirectoryPage({ documents, tree }) {
   return (
     <div className="directory">
       <h1>Directory</h1>
-      <CatalogList documents={documents} tree={tree} active={null} openPaths={EMPTY_PATHS} />
+      <CatalogList documents={documents} tree={tree} active={null} openPaths={EMPTY_PATHS} surface="directory" />
     </div>
   )
 }
@@ -354,6 +364,8 @@ export default function App() {
   })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [boot, setBoot] = useState({ loading: true, error: null, directory: null })
+  const catalogTracked = useRef(false)
+  const pageKey = useRef('')
 
   useEffect(() => {
     document.documentElement.classList.toggle('nav-collapsed', !narrow && collapsed)
@@ -393,6 +405,19 @@ export default function App() {
     () => (catalog ? buildTree(catalog.documents) : null),
     [catalog],
   )
+
+  useEffect(() => {
+    if (boot.loading) return
+    if (!catalogTracked.current) {
+      catalogTracked.current = true
+      if (boot.error) track('catalog_load_failed')
+      else track('catalog_loaded', { document_count: catalog ? catalog.documents.length : 0 })
+    }
+    if (pageKey.current === path) return
+    pageKey.current = path
+    track('$pageview', pageviewProperties(catalog, window.location.pathname, window.location.hash))
+  }, [path, boot.loading, boot.error, catalog])
+
   const route = parsePath(window.location.pathname, window.location.hash)
   const directoryPage = isDirectoryRoute(route)
   const id = directoryPage ? null : (route.id || (catalog ? rootDocumentID(catalog) : null))
@@ -454,6 +479,7 @@ export default function App() {
             active={id}
             openPaths={openPaths}
             onNavigate={onNavClick}
+            surface="sidebar"
           />
         ) : <nav />}
       </aside>
