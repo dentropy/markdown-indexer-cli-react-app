@@ -32,7 +32,16 @@ The publisher writes `/tmp/vault-site/directory.json`. Open http://127.0.0.1:808
 Turn a raw markdown folder into the JSON site. The first mount is the markdown. The second mount is the output.
 
 ```sh
-docker run --rm -v "$PWD/examples/vault:/vault:ro" -v /tmp/vault-site:/site $(docker build -q --target cli .) -dir /vault -site-dir /site
+# Build the CLI image and name it markdown-indexer-cli.
+docker build --target cli -t markdown-indexer-cli .
+
+# Publish the example vault into /tmp/vault-site.
+docker run --rm \
+  -v "$PWD/examples/vault:/vault:ro" \
+  -v /tmp/vault-site:/site \
+  markdown-indexer-cli \
+  -dir /vault \
+  -site-dir /site
 ```
 
 ```sh
