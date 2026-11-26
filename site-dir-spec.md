@@ -8,15 +8,9 @@ markdown-tools-cli -dir <vault> -site-dir <site>
 
 ## Install markdown-tools-cli
 
-The tool is the `main` package of [github.com/dentropy/markdown-indexer](https://github.com/dentropy/markdown-indexer), in [`libs/markdown-tools-cli`](https://github.com/dentropy/markdown-indexer/tree/main/libs/markdown-tools-cli). It requires Go 1.27.
+The tool is the `main` package of [github.com/dentropy/markdown-indexer](https://github.com/dentropy/markdown-indexer), in [`libs/markdown-tools-cli`](https://github.com/dentropy/markdown-indexer/tree/main/libs/markdown-tools-cli). It requires Go 1.27. The binary is `markdown-tools-cli`.
 
-```sh
-go install github.com/dentropy/markdown-indexer/libs/markdown-tools-cli@latest
-```
-
-`go install` places the `markdown-tools-cli` binary in `$(go env GOPATH)/bin`. That directory must be on `PATH`.
-
-From a clone of the same repository:
+Build it from a clone. `go install github.com/dentropy/markdown-indexer/libs/markdown-tools-cli@latest` is rejected, because this module's `go.mod` contains `replace` directives for the sibling libraries.
 
 ```sh
 git clone https://github.com/dentropy/markdown-indexer.git
@@ -24,11 +18,19 @@ cd markdown-indexer/libs/markdown-tools-cli
 go build -o markdown-tools-cli .
 ```
 
-Run the built binary as `./markdown-tools-cli`, or copy it onto `PATH`. Then publish a vault:
+Run the built binary as `./markdown-tools-cli`, or copy it onto `PATH` (`$(go env GOPATH)/bin`). Then publish a vault:
 
 ```sh
 markdown-tools-cli -dir <vault> -site-dir <site>
 ```
+
+The publisher writes the catalog as `<site>/manifest.json`. This reader fetches `<site>/directory.json`, which is that same JSON. Link them after each layout is created:
+
+```sh
+ln -sfn manifest.json <site>/directory.json
+```
+
+[README.md](./README.md) walks from this install through a browser on port 5173. The tagged module `markdown-indexer-cli` (v0.2.0 and earlier) does not write a site directory.
 
 A frontend reads `<site>` over HTTP (or from disk) and renders it. It does not read the vault, and it does not need the Go source. The normative file shapes are also in:
 
@@ -46,12 +48,15 @@ The layout decision is recorded in [ADR 0006](https://github.com/dentropy/markdo
 
 ```
 <site>/
-  directory.json
+  manifest.json          # the catalog the publisher writes
+  directory.json         # this reader; same bytes, usually a symlink to manifest.json
   articles/<uuid>.json
   frontmatter/<frontmatter_cid>.json
   assets/<sha256><ext>
   backlinks/<uuid>.json
 ```
+
+The publisher's own name for the catalog is `manifest.json` ([ADR 0006](https://github.com/dentropy/markdown-indexer/blob/main/libs/markdown-indexer/docs/adr/0006-static-site-layout.md)). Every `directory.json` below is that file under the name this app requests.
 
 `<uuid>` is the document identity, read from front matter. `<frontmatter_cid>` is a CIDv1 (dag-json, sha2-256) of that front matter. `<sha256>` is 64 lowercase hex characters, the sha256 of the asset bytes. `<ext>` is the original file extension, including the dot, lowercased. A file with no extension is published as the bare hash, with no dot.
 

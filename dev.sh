@@ -10,7 +10,9 @@ app_port="${APP_PORT:-5173}"
 
 if [[ ! -f "$data_dir/directory.json" ]]; then
   echo "no directory.json in $data_dir" >&2
-  echo "set DATA_DIR to the folder from: markdown-tools-cli -dir <vault> -site-dir <site>" >&2
+  echo "publish with: markdown-tools-cli -dir <vault> -site-dir <site>" >&2
+  echo "the CLI writes manifest.json; this app fetches directory.json:" >&2
+  echo "  ln -sfn manifest.json \"$data_dir/directory.json\"" >&2
   exit 1
 fi
 

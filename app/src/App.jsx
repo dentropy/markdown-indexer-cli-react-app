@@ -436,7 +436,7 @@ export default function App() {
           <>
             <h1>Failed to load data</h1>
             <pre className="error">{String(boot.error.message || boot.error)}</pre>
-            <p>The app fetches <code>directory.json</code> from this server. Point it at a <code>-site-dir</code> folder with <code>experiments/025/dev.sh</code>.</p>
+            <p>The app fetches <code>directory.json</code> from this server. Publish with <code>markdown-tools-cli -site-dir</code>, link <code>manifest.json</code> to <code>directory.json</code>, and start <code>DATA_DIR=... ./dev.sh</code>.</p>
           </>
         ) : null}
         {!boot.loading && !boot.error && catalog && !directoryPage && !id ? <h1>Empty vault</h1> : null}
