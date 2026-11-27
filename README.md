@@ -22,7 +22,7 @@ Node.js 20.19 or newer (or 22.12 or newer) and Python 3. Run this from the root 
 export PATH="$(go env GOPATH)/bin:$PATH"
 mkdir -p /tmp/vault-site
 markdown-indexer-cli -dir examples/vault -site-dir /tmp/vault-site
-APP_PORT=8080 DATA_DIR=/tmp/vault-site ./dev.sh
+DATA_PORT=12321 APP_PORT=8083 DATA_DIR=/tmp/vault-site ./dev.sh
 ```
 
 The publisher writes `/tmp/vault-site/directory.json`. Open http://127.0.0.1:8080/. The sidebar lists Hello and Second note.
